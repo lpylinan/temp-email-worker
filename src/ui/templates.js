@@ -583,7 +583,7 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             if (hasHtml) {
               const parser = new DOMParser();
               const parsed = parser.parseFromString(rawHtml, "text/html");
-              parsed.querySelectorAll("script, iframe, object, embed, link[rel=\"import\"], meta[http-equiv], form, input, button, textarea, select").forEach((el) => el.remove());
+              parsed.querySelectorAll('script, iframe, object, embed, link[rel="import"], meta[http-equiv], form, input, button, textarea, select').forEach((el) => el.remove());
               parsed.querySelectorAll("*").forEach((el) => {
                 for (const attr of Array.from(el.attributes || [])) {
                   const name = String(attr.name || "").toLowerCase();
