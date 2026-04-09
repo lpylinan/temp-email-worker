@@ -131,7 +131,11 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             <div v-for="item in items" :key="item.message_id" class="p-3.5 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] hover:bg-white dark:hover:bg-white/[0.04] hover:shadow-sm dark:hover:shadow-none transition-all duration-200 cursor-pointer group" @click="toggleResult(item.message_id)">
               <div class="grid grid-cols-[1.5fr,1.2fr,1.2fr,0.8fr] gap-4 items-center">
                 <div class="min-w-0">
-                  <div class="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{{ item.subject || '(无主题)' }}</div>
+                  <button
+                    type="button"
+                    class="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-white transition-colors underline-offset-2 hover:underline"
+                    @click.stop="openEmailBody(item.message_id)"
+                  >{{ item.subject || '(无主题)' }}</button>
                 </div>
                 <div class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ item.from_address }}</div>
                 <div class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ item.to_address }}</div>
@@ -529,6 +533,42 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
           },
           async nextWhitelistPage() { if (this.whitelistPage < this.whitelistTotalPages) { this.whitelistPage += 1; await this.loadWhitelistData(); } },
           async prevWhitelistPage() { if (this.whitelistPage > 1) { this.whitelistPage -= 1; await this.loadWhitelistData(); } },
+          escapeHtml(value) {
+            return String(value || "")
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/\"/g, "&quot;")
+              .replace(/'/g, "&#39;");
+          },
+          async loadEmailDetail(messageId) {
+            const payload = await this.requestJson("/admin/emails/" + encodeURIComponent(messageId));
+            return payload?.data || null;
+          },
+          async openEmailBody(messageId) {
+            const row = await this.loadEmailDetail(messageId);
+            if (!row) return;
+
+            const win = window.open("", "_blank", "noopener,noreferrer,width=980,height=760");
+            if (!win) {
+              alert("浏览器拦截了弹窗，请允许当前站点弹窗后重试。");
+              return;
+            }
+
+            const subject = row.subject || "(无主题)";
+            const from = row.from_address || "";
+            const to = row.to_address || "";
+            const receivedAt = row.received_at ? this.formatTime(row.received_at) : "";
+            const rawText = row.raw_text || "";
+            const rawHtml = row.raw_html || "";
+            const body = rawText || rawHtml || "无正文内容";
+
+            win.document.open();
+            win.document.write(
+              "<!DOCTYPE html><html><head><meta charset=\"UTF-8\" /><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" /><title>邮件正文 - " + this.escapeHtml(subject) + "</title><style>body{margin:0;padding:24px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;color:#0f172a} .card{max-width:980px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 4px 18px rgba(15,23,42,.06)} .head{padding:18px 20px;border-bottom:1px solid #e2e8f0} .title{margin:0 0 8px;font-size:18px;line-height:1.4} .meta{margin:4px 0;color:#475569;font-size:12px;word-break:break-all} pre{margin:0;padding:20px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:12px;line-height:1.6;background:#fff}</style></head><body><div class=\"card\"><div class=\"head\"><h1 class=\"title\">" + this.escapeHtml(subject) + "</h1><div class=\"meta\">发件人：" + this.escapeHtml(from) + "</div><div class=\"meta\">收件人：" + this.escapeHtml(to) + "</div><div class=\"meta\">接收时间：" + this.escapeHtml(receivedAt) + "</div></div><pre>" + this.escapeHtml(body) + "</pre></div></body></html>"
+            );
+            win.document.close();
+          },
           toggleResult(messageId) { this.expandedResults[messageId] = !this.expandedResults[messageId]; },
           async copyContent(text, messageId) {
             try {

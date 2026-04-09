@@ -77,6 +77,26 @@ export async function getEmails(db, page, pageSize, domain = null) {
 }
 
 /**
+ * 按 message_id 获取邮件详情（含原文字段）
+ */
+export async function getEmailDetailByMessageId(db, messageId) {
+  try {
+    return await db.prepare(
+      "SELECT message_id, from_address, to_address, subject, received_at, raw_text, raw_html FROM emails WHERE message_id = ? LIMIT 1"
+    ).bind(messageId).first();
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    if (!/raw_text|raw_html|has no column named/i.test(msg)) throw err;
+
+    const row = await db.prepare(
+      "SELECT message_id, from_address, to_address, subject, received_at FROM emails WHERE message_id = ? LIMIT 1"
+    ).bind(messageId).first();
+    if (!row) return null;
+    return { ...row, raw_text: null, raw_html: null };
+  }
+}
+
+/**
  * 获取系统中出现过的所有唯一域名
  */
 export async function getAvailableDomains(db) {

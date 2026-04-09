@@ -63,6 +63,7 @@ export default {
       // 分发请求
       if (pathname === "/admin/domains" && method === "GET") return handlers.handleAdminDomains(url, env.DB);
       if (pathname === "/admin/emails" && method === "GET") return handlers.handleAdminEmails(url, env.DB);
+      if (pathname.startsWith("/admin/emails/") && method === "GET") return handlers.handleAdminEmailDetail(pathname, env.DB);
       if (pathname === "/admin/rules" && method === "GET") return handlers.handleAdminRulesGet(url, env.DB);
       if (pathname === "/admin/rules" && method === "POST") return handlers.handleAdminRulesPost(request, env.DB);
       if (pathname.startsWith("/admin/rules/") && method === "DELETE") return handlers.handleAdminRulesDelete(pathname, env.DB);
