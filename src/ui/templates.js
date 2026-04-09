@@ -545,7 +545,7 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             }
 
             win.document.open();
-            win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>邮件正文</title><style>body{margin:0;padding:24px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;color:#0f172a}.card{max-width:980px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 4px 18px rgba(15,23,42,.06)}.head{padding:18px 20px;border-bottom:1px solid #e2e8f0}.title{margin:0 0 8px;font-size:18px;line-height:1.4}.meta{margin:4px 0;color:#475569;font-size:12px;word-break:break-all}pre{margin:0;padding:20px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;line-height:1.6;background:#fff}</style></head><body><div class="card"><div class="head"><h1 class="title" id="mail-title">加载中...</h1><div class="meta" id="mail-from"></div><div class="meta" id="mail-to"></div><div class="meta" id="mail-time"></div></div><pre id="mail-body">正在加载邮件正文...</pre></div></body></html>');
+            win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>邮件正文</title><style>body{margin:0;padding:24px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;color:#0f172a}.card{max-width:980px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 4px 18px rgba(15,23,42,.06)}.head{padding:18px 20px;border-bottom:1px solid #e2e8f0}.title{margin:0 0 8px;font-size:18px;line-height:1.4}.meta{margin:4px 0;color:#475569;font-size:12px;word-break:break-all}.mail-body{padding:20px;font-size:14px;line-height:1.7;background:#fff;word-break:break-word}.mail-body *{max-width:100%}.mail-body.as-text{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;line-height:1.6}</style></head><body><div class="card"><div class="head"><h1 class="title" id="mail-title">加载中...</h1><div class="meta" id="mail-from"></div><div class="meta" id="mail-to"></div><div class="meta" id="mail-time"></div></div><div id="mail-body" class="mail-body as-text">正在加载邮件正文...</div></div></body></html>');
             win.document.close();
 
             const row = await this.loadEmailDetail(messageId);
@@ -563,7 +563,8 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             const receivedAt = row.received_at ? this.formatTime(row.received_at) : "";
             const rawText = row.raw_text || "";
             const rawHtml = row.raw_html || "";
-            const body = rawText || rawHtml || "无正文内容";
+            const hasHtml = typeof rawHtml === "string" && rawHtml.trim().length > 0;
+            const hasText = typeof rawText === "string" && rawText.trim().length > 0;
 
             win.document.title = "邮件正文 - " + subject;
             const titleEl = win.document.getElementById("mail-title");
@@ -577,7 +578,33 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             fromEl.textContent = "发件人：" + from;
             toEl.textContent = "收件人：" + to;
             timeEl.textContent = "接收时间：" + receivedAt;
-            bodyEl.textContent = body;
+
+            bodyEl.className = "mail-body";
+            if (hasHtml) {
+              const parser = new DOMParser();
+              const parsed = parser.parseFromString(rawHtml, "text/html");
+              parsed.querySelectorAll("script, iframe, object, embed, link[rel=\"import\"], meta[http-equiv], form, input, button, textarea, select").forEach((el) => el.remove());
+              parsed.querySelectorAll("*").forEach((el) => {
+                for (const attr of Array.from(el.attributes || [])) {
+                  const name = String(attr.name || "").toLowerCase();
+                  const value = String(attr.value || "").toLowerCase();
+                  if (name.startsWith("on")) {
+                    el.removeAttribute(attr.name);
+                    continue;
+                  }
+                  if ((name === "src" || name === "href") && /^javascript:/i.test(value)) {
+                    el.removeAttribute(attr.name);
+                  }
+                }
+              });
+              bodyEl.innerHTML = parsed.body ? parsed.body.innerHTML : rawHtml;
+            } else if (hasText) {
+              bodyEl.className = "mail-body as-text";
+              bodyEl.textContent = rawText;
+            } else {
+              bodyEl.className = "mail-body as-text";
+              bodyEl.textContent = "无正文内容";
+            }
           },
           toggleResult(messageId) { this.expandedResults[messageId] = !this.expandedResults[messageId]; },
           async copyContent(text, messageId) {
