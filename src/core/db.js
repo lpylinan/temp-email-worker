@@ -155,16 +155,18 @@ export async function deleteWhitelistEntry(db, id) {
  * 存储处理过的邮件记录
  */
 export async function saveEmail(db, data) {
-  const { from, to, subject, matches } = data;
+  const { from, to, subject, matches, text, html } = data;
   return db.prepare(
-    "INSERT INTO emails (message_id, from_address, to_address, subject, extracted_json, received_at) VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT INTO emails (message_id, from_address, to_address, subject, extracted_json, received_at, raw_text, raw_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(
     crypto.randomUUID(),
     from,
     to.join(","),
     subject,
     JSON.stringify(matches),
-    Date.now()
+    Date.now(),
+    text || null,
+    html || null
   ).run();
 }
 
