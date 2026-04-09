@@ -533,14 +533,6 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
           },
           async nextWhitelistPage() { if (this.whitelistPage < this.whitelistTotalPages) { this.whitelistPage += 1; await this.loadWhitelistData(); } },
           async prevWhitelistPage() { if (this.whitelistPage > 1) { this.whitelistPage -= 1; await this.loadWhitelistData(); } },
-          escapeHtml(value) {
-            return String(value || "")
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/\"/g, "&quot;")
-              .replace(/'/g, "&#39;");
-          },
           async loadEmailDetail(messageId) {
             const payload = await this.requestJson("/admin/emails/" + encodeURIComponent(messageId));
             return payload?.data || null;
@@ -564,10 +556,22 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             const body = rawText || rawHtml || "无正文内容";
 
             win.document.open();
-            win.document.write(
-              "<!DOCTYPE html><html><head><meta charset=\"UTF-8\" /><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" /><title>邮件正文 - " + this.escapeHtml(subject) + "</title><style>body{margin:0;padding:24px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;color:#0f172a} .card{max-width:980px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 4px 18px rgba(15,23,42,.06)} .head{padding:18px 20px;border-bottom:1px solid #e2e8f0} .title{margin:0 0 8px;font-size:18px;line-height:1.4} .meta{margin:4px 0;color:#475569;font-size:12px;word-break:break-all} pre{margin:0;padding:20px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:12px;line-height:1.6;background:#fff}</style></head><body><div class=\"card\"><div class=\"head\"><h1 class=\"title\">" + this.escapeHtml(subject) + "</h1><div class=\"meta\">发件人：" + this.escapeHtml(from) + "</div><div class=\"meta\">收件人：" + this.escapeHtml(to) + "</div><div class=\"meta\">接收时间：" + this.escapeHtml(receivedAt) + "</div></div><pre>" + this.escapeHtml(body) + "</pre></div></body></html>"
-            );
+            win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title></title><style>body{margin:0;padding:24px;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;color:#0f172a}.card{max-width:980px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 4px 18px rgba(15,23,42,.06)}.head{padding:18px 20px;border-bottom:1px solid #e2e8f0}.title{margin:0 0 8px;font-size:18px;line-height:1.4}.meta{margin:4px 0;color:#475569;font-size:12px;word-break:break-all}pre{margin:0;padding:20px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;line-height:1.6;background:#fff}</style></head><body><div class="card"><div class="head"><h1 class="title" id="mail-title"></h1><div class="meta" id="mail-from"></div><div class="meta" id="mail-to"></div><div class="meta" id="mail-time"></div></div><pre id="mail-body"></pre></div></body></html>');
             win.document.close();
+
+            win.document.title = "邮件正文 - " + subject;
+            const titleEl = win.document.getElementById("mail-title");
+            const fromEl = win.document.getElementById("mail-from");
+            const toEl = win.document.getElementById("mail-to");
+            const timeEl = win.document.getElementById("mail-time");
+            const bodyEl = win.document.getElementById("mail-body");
+            if (!titleEl || !fromEl || !toEl || !timeEl || !bodyEl) return;
+
+            titleEl.textContent = subject;
+            fromEl.textContent = "发件人：" + from;
+            toEl.textContent = "收件人：" + to;
+            timeEl.textContent = "接收时间：" + receivedAt;
+            bodyEl.textContent = body;
           },
           toggleResult(messageId) { this.expandedResults[messageId] = !this.expandedResults[messageId]; },
           async copyContent(text, messageId) {
