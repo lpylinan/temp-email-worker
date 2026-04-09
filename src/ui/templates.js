@@ -121,22 +121,27 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             </div>
           </div>
           <div class="p-5 space-y-3">
-            <div class="grid grid-cols-[1.5fr,1.2fr,1.2fr,0.8fr] gap-4 px-3 text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-medium">
+            <div class="grid grid-cols-[1.3fr,1fr,1fr,0.8fr,0.7fr] gap-4 px-3 text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-medium">
               <div>主题</div>
               <div>发件人</div>
               <div>收件人</div>
+              <div>转发状态</div>
               <div class="text-right">已接收</div>
             </div>
             <div v-if="items.length===0" class="min-h-[240px] flex items-center justify-center text-xs text-slate-400">暂无邮件记录</div>
             <div v-for="item in items" :key="item.message_id" class="p-3.5 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] hover:bg-white dark:hover:bg-white/[0.04] hover:shadow-sm dark:hover:shadow-none transition-all duration-200 cursor-pointer group" @click="toggleResult(item.message_id)">
-              <div class="grid grid-cols-[1.5fr,1.2fr,1.2fr,0.8fr] gap-4 items-center">
+              <div class="grid grid-cols-[1.3fr,1fr,1fr,0.8fr,0.7fr] gap-4 items-center">
                 <div class="min-w-0">
                   <div class="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{{ item.subject || '(无主题)' }}</div>
                 </div>
                 <div class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ item.from_address }}</div>
                 <div class="min-w-0 text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ item.to_address }}</div>
+                <div>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border"
+                    :class="forwardStatusClass(item.forward_status)">{{ forwardStatusText(item.forward_status) }}</span>
+                </div>
                 <div class="text-[11px] text-slate-500 dark:text-slate-400 text-right tabular-nums">{{ formatTime(item.received_at) }}</div>
-                <div v-if="!hasResult(item.extracted_json) || expandedResults[item.message_id]" class="col-span-4 mt-3">
+                <div v-if="!hasResult(item.extracted_json) || expandedResults[item.message_id]" class="col-span-5 mt-3">
                   <div v-if="hasResult(item.extracted_json) && expandedResults[item.message_id]" class="relative group/copy" @click.stop>
                     <div
                       class="text-[12px] bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-200 rounded-lg p-3 whitespace-pre-wrap font-mono pr-12 shadow-inner"
@@ -147,6 +152,18 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
                     >{{ copyStatus[item.message_id] ? '已复制' : '复制' }}</button>
                   </div>
                   <div v-if="!hasResult(item.extracted_json)" class="text-[11px] text-slate-400 dark:text-slate-600">— 未提取到规则内容</div>
+                  <div v-if="expandedResults[item.message_id]" class="mt-3" @click.stop>
+                    <div class="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1.5">邮件原文</div>
+                    <div v-if="emailDetails[item.message_id] && (emailDetails[item.message_id].raw_text || emailDetails[item.message_id].raw_html)" class="relative group/copy">
+                      <div class="text-[12px] bg-slate-100 dark:bg-black/30 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 rounded-lg p-3 whitespace-pre-wrap font-mono pr-12 max-h-64 overflow-auto">{{ formatRawContent(emailDetails[item.message_id]) }}</div>
+                      <button
+                        class="absolute top-2 right-2 p-1.5 rounded-md text-slate-400 dark:text-slate-300 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 opacity-0 group-hover/copy:opacity-100 transition-all border border-transparent hover:border-slate-300 dark:hover:border-white/20 font-medium text-[10px] tracking-wider uppercase"
+                        @click.stop="copyContent(formatRawContent(emailDetails[item.message_id]), 'raw-' + item.message_id)"
+                      >{{ copyStatus['raw-' + item.message_id] ? '已复制' : '复制' }}</button>
+                    </div>
+                    <div v-else-if="emailDetailLoading[item.message_id]" class="text-[11px] text-slate-400">原文加载中...</div>
+                    <div v-else class="text-[11px] text-slate-400">— 无原文记录</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -413,7 +430,8 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             adminToken: "", adminError: "", poller: null,
             expandedResults: {}, copyStatus: {}, isDark: true,
             apiActive: true,
-            availableDomains: [], filterDomain: ""
+            availableDomains: [], filterDomain: "",
+            emailDetails: {}, emailDetailLoading: {}
           };
         },
         computed: {
@@ -473,6 +491,15 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             if (!payload || !payload.data) return;
             this.items = payload.data.items || [];
             this.total = payload.data.total || 0;
+            for (const item of this.items) {
+              if (!this.emailDetails[item.message_id]) continue;
+              this.emailDetails[item.message_id] = {
+                ...this.emailDetails[item.message_id],
+                forward_status: item.forward_status,
+                forward_error: item.forward_error,
+                forwarded_at: item.forwarded_at
+              };
+            }
           },
           async loadDomains() {
             const payload = await this.requestJson("/admin/domains");
@@ -529,7 +556,18 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
           },
           async nextWhitelistPage() { if (this.whitelistPage < this.whitelistTotalPages) { this.whitelistPage += 1; await this.loadWhitelistData(); } },
           async prevWhitelistPage() { if (this.whitelistPage > 1) { this.whitelistPage -= 1; await this.loadWhitelistData(); } },
-          toggleResult(messageId) { this.expandedResults[messageId] = !this.expandedResults[messageId]; },
+          async toggleResult(messageId) {
+            this.expandedResults[messageId] = !this.expandedResults[messageId];
+            if (this.expandedResults[messageId] && !this.emailDetails[messageId]) {
+              await this.loadEmailDetail(messageId);
+            }
+          },
+          async loadEmailDetail(messageId) {
+            this.emailDetailLoading[messageId] = true;
+            const payload = await this.requestJson("/admin/emails/" + encodeURIComponent(messageId));
+            if (payload && payload.data) this.emailDetails[messageId] = payload.data;
+            this.emailDetailLoading[messageId] = false;
+          },
           async copyContent(text, messageId) {
             try {
               await navigator.clipboard.writeText(text);
@@ -543,6 +581,24 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
               const p = JSON.parse(raw);
               return Array.isArray(p) ? JSON.stringify(p, null, 2) : String(p ?? "");
             } catch { return raw || ""; }
+          },
+          forwardStatusText(status) {
+            if (status === "success") return "已转发";
+            if (status === "failed") return "转发失败";
+            if (status === "pending") return "待转发";
+            if (status === "skipped") return "未配置转发";
+            return "未知";
+          },
+          forwardStatusClass(status) {
+            if (status === "success") return "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400";
+            if (status === "failed") return "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400";
+            if (status === "pending") return "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400";
+            if (status === "skipped") return "bg-slate-200/60 dark:bg-white/10 border-slate-300 dark:border-white/15 text-slate-600 dark:text-slate-300";
+            return "bg-slate-200/60 dark:bg-white/10 border-slate-300 dark:border-white/15 text-slate-500 dark:text-slate-400";
+          },
+          formatRawContent(detail) {
+            if (!detail) return "";
+            return detail.raw_text || detail.raw_html || "";
           },
           formatTime(ts) { return new Date(ts).toLocaleString(); }
         }

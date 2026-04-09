@@ -33,6 +33,19 @@ export async function handleAdminEmails(url, db) {
 }
 
 /**
+ * [Admin] 获取单封邮件详情（包含原文）
+ */
+export async function handleAdminEmailDetail(pathname, db) {
+  const messageId = decodeURIComponent(String(pathname.replace("/admin/emails/", "") || "")).trim();
+  if (!messageId) return jsonError("invalid message id", 400);
+
+  const row = await dbActions.getEmailDetailByMessageId(db, messageId);
+  if (!row) return jsonError("message not found", 404);
+
+  return json(row);
+}
+
+/**
  * [Admin] 获取系统中的所有域名
  */
 export async function handleAdminDomains(url, db) {

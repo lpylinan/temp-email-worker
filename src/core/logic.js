@@ -71,7 +71,7 @@ function senderMatches(senderValue, filterValue) {
 /**
  * 集中处理入站邮件的完整流程 (解析 -> 过滤 -> 匹配 -> 存储)
  */
-export async function processIncomingEmail(message, env, ctx) {
+export async function processIncomingEmail(message, env, _ctx) {
   const parsed = await parseIncomingEmail(message);
 
   // Normalize emails to reduce case-sensitivity surprises
@@ -87,8 +87,16 @@ export async function processIncomingEmail(message, env, ctx) {
   const content = parsed.text || parsed.html || "";
   const matches = applyRules(content, parsed.from, rules);
 
-  // 3. 异步持久化存储
-  ctx.waitUntil(saveEmail(env.DB, { ...parsed, matches }));
+  // 3. 持久化存储（用于后续转发状态回写）
+  const messageId = crypto.randomUUID();
+  await saveEmail(env.DB, {
+    ...parsed,
+    message_id: messageId,
+    matches,
+    rawText: parsed.text || "",
+    rawHtml: parsed.html || "",
+    forwardStatus: env.FORWARD_TO ? "pending" : "skipped"
+  });
 
-  return parsed;
+  return { ...parsed, message_id: messageId };
 }

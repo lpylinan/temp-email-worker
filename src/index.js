@@ -1,7 +1,7 @@
 import { PAGE_SIZE, RULES_PAGE_SIZE, HTML_HEADERS, CORS_HEADERS } from "./utils/constants.js";
 import { jsonError, applyCors } from "./utils/utils.js";
 import { isAdminAuthorized, isApiAuthorized } from "./core/auth.js";
-import { clearExpiredEmails } from "./core/db.js";
+import { clearExpiredEmails, updateForwardStatus } from "./core/db.js";
 import { processIncomingEmail } from "./core/logic.js";
 import * as handlers from "./handlers/handlers.js";
 import { renderAuthHtml, renderHtml } from "./ui/templates.js";
@@ -20,13 +20,17 @@ export default {
    */
   async email(message, env, ctx) {
     const parsed = await processIncomingEmail(message, env, ctx);
+    if (!parsed) return;
 
     // 如果处理成功（通过白名单）且设置了全局转发
-    if (parsed && env.FORWARD_TO) {
+    if (env.FORWARD_TO) {
       try {
         await message.forward(env.FORWARD_TO);
+        ctx.waitUntil(updateForwardStatus(env.DB, parsed.message_id, "success", null, Date.now()));
       } catch (err) {
         console.error("邮件转发失败:", err);
+        const errorText = err instanceof Error ? err.message : String(err || "forward failed");
+        ctx.waitUntil(updateForwardStatus(env.DB, parsed.message_id, "failed", errorText, null));
       }
     }
   },
@@ -63,6 +67,7 @@ export default {
       // 分发请求
       if (pathname === "/admin/domains" && method === "GET") return handlers.handleAdminDomains(url, env.DB);
       if (pathname === "/admin/emails" && method === "GET") return handlers.handleAdminEmails(url, env.DB);
+      if (pathname.startsWith("/admin/emails/") && method === "GET") return handlers.handleAdminEmailDetail(pathname, env.DB);
       if (pathname === "/admin/rules" && method === "GET") return handlers.handleAdminRulesGet(url, env.DB);
       if (pathname === "/admin/rules" && method === "POST") return handlers.handleAdminRulesPost(request, env.DB);
       if (pathname.startsWith("/admin/rules/") && method === "DELETE") return handlers.handleAdminRulesDelete(pathname, env.DB);
