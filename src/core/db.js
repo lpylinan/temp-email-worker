@@ -156,18 +156,32 @@ export async function deleteWhitelistEntry(db, id) {
  */
 export async function saveEmail(db, data) {
   const { from, to, subject, matches, text, html } = data;
-  return db.prepare(
-    "INSERT INTO emails (message_id, from_address, to_address, subject, extracted_json, received_at, raw_text, raw_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-  ).bind(
+  const baseParams = [
     crypto.randomUUID(),
     from,
     to.join(","),
     subject,
     JSON.stringify(matches),
-    Date.now(),
-    text || null,
-    html || null
-  ).run();
+    Date.now()
+  ];
+
+  try {
+    return await db.prepare(
+      "INSERT INTO emails (message_id, from_address, to_address, subject, extracted_json, received_at, raw_text, raw_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(
+      ...baseParams,
+      text || null,
+      html || null
+    ).run();
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    if (!/raw_text|raw_html|has no column named/i.test(msg)) throw err;
+
+    // 兼容尚未执行 0002 迁移的旧库结构
+    return db.prepare(
+      "INSERT INTO emails (message_id, from_address, to_address, subject, extracted_json, received_at) VALUES (?, ?, ?, ?, ?, ?)"
+    ).bind(...baseParams).run();
+  }
 }
 
 /**
