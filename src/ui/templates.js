@@ -399,7 +399,7 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
       <footer class="max-w-5xl mx-auto px-4 py-6 text-xs text-slate-500 dark:text-slate-400">
         <div class="flex items-center justify-between border-t border-slate-200 dark:border-white/10 pt-4">
           <span>© 2026 Temp Mail Console</span>
-          <a class="text-slate-400 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors" href="https://github.com/beyoug/temp-mail-console" target="_blank" rel="noreferrer">GitHub</a>
+          <a class="text-slate-400 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors" href="https://github.com/lpylinan/temp-email-worker-1" target="_blank" rel="noreferrer">GitHub</a>
         </div>
       </footer>
     </div>

@@ -27,7 +27,7 @@
 
 ### 方式一：一键部署（推荐）
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/beyoug/temp-mail-console)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/lpylinan/temp-email-worker-1)
 
 > 点击上方按钮可全自动 Fork 并在你的 Cloudflare 账户上部署该项目，自动分配 D1 数据库资源。部署后别忘了按下方指南补充运行时变量（如 `ADMIN_TOKEN` 和 `API_TOKEN`）以及邮件路由。
 
