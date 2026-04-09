@@ -54,7 +54,7 @@ export async function getLatestEmail(db, address) {
  */
 export async function getEmails(db, page, pageSize, domain = null) {
   const offset = (page - 1) * pageSize;
-  let query = "SELECT message_id, from_address, to_address, subject, extracted_json, received_at, forward_status, forwarded_at, forward_error FROM emails";
+  let query = "SELECT message_id, from_address, to_address, subject, extracted_json, received_at FROM emails";
   let countQuery = "SELECT COUNT(1) as total FROM emails";
   const params = [pageSize, offset];
   const countParams = [];
@@ -75,16 +75,6 @@ export async function getEmails(db, page, pageSize, domain = null) {
   ]);
   return { items: list.results, total: countRow?.total || 0 };
 }
-
-/**
- * 根据 message_id 获取单条邮件详情
- */
-export async function getEmailDetailByMessageId(db, messageId) {
-  return db.prepare(
-    "SELECT message_id, from_address, to_address, subject, extracted_json, raw_text, raw_html, received_at, forward_status, forwarded_at, forward_error FROM emails WHERE message_id = ? LIMIT 1"
-  ).bind(String(messageId || "")).first();
-}
-
 
 /**
  * 获取系统中出现过的所有唯一域名
@@ -165,35 +155,16 @@ export async function deleteWhitelistEntry(db, id) {
  * 存储处理过的邮件记录
  */
 export async function saveEmail(db, data) {
-  const { message_id, from, to, subject, matches, rawText, rawHtml, forwardStatus } = data;
-  const messageId = String(message_id || crypto.randomUUID());
-  await db.prepare(
-    "INSERT INTO emails (message_id, from_address, to_address, subject, extracted_json, raw_text, raw_html, forward_status, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  const { from, to, subject, matches } = data;
+  return db.prepare(
+    "INSERT INTO emails (message_id, from_address, to_address, subject, extracted_json, received_at) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(
-    messageId,
+    crypto.randomUUID(),
     from,
     to.join(","),
     subject,
     JSON.stringify(matches),
-    rawText || null,
-    rawHtml || null,
-    forwardStatus || null,
     Date.now()
-  ).run();
-  return messageId;
-}
-
-/**
- * 更新邮件转发状态
- */
-export async function updateForwardStatus(db, messageId, status, error = null, forwardedAt = null) {
-  return db.prepare(
-    "UPDATE emails SET forward_status = ?, forward_error = ?, forwarded_at = ? WHERE message_id = ?"
-  ).bind(
-    status || null,
-    error || null,
-    forwardedAt || null,
-    String(messageId || "")
   ).run();
 }
 
