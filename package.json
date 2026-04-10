@@ -1,5 +1,5 @@
 {
-  "name": "temp-email-worker-1",
+  "name": "temp-email-worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -1,4 +1,4 @@
-name = "temp-email-worker-1"
+name = "temp-email-worker"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 
