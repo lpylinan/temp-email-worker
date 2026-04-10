@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS emails (
   to_address TEXT NOT NULL,
   subject TEXT NOT NULL,
   extracted_json TEXT NOT NULL,
+  raw_text TEXT,
+  raw_html TEXT,
   received_at INTEGER NOT NULL
 );
 
