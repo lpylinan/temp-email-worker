@@ -8,4 +8,4 @@ database_name = "temp-email-db-1"
 database_id = "e8760259-6294-474e-800e-a646e03cddc1"
 
 [triggers]
-crons = ["0 * * * *"] # 每小时执行一次，检查并清理超过48小时的数据
+crons = ["0 * * * *"] # 每小时执行一次，检查并清理超过1.5年的数据

@@ -6,6 +6,8 @@ import { processIncomingEmail } from "./core/logic.js";
 import * as handlers from "./handlers/handlers.js";
 import { renderAuthHtml, renderHtml } from "./ui/templates.js";
 
+const EMAIL_RETENTION_HOURS = 24 * 365 * 1.5; // 1.5 年
+
 function apiOptionsResponse() {
   return new Response(null, { status: 204, headers: { ...CORS_HEADERS } });
 }
@@ -81,7 +83,7 @@ export default {
    */
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(
-      clearExpiredEmails(env.DB, 48)
+      clearExpiredEmails(env.DB, EMAIL_RETENTION_HOURS)
         .then(() => console.log("[Cron] 自动清理完毕"))
         .catch(err => console.error("[Cron] 自动清理失败:", err))
     );
