@@ -113,6 +113,17 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
                   <option v-for="d in availableDomains" :key="d" :value="d">{{ d }}</option>
                 </select>
               </div>
+              <!-- 收件人搜索 -->
+              <div class="flex items-center gap-2 pl-4 border-l border-slate-200 dark:border-white/5">
+                <span class="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">收件人</span>
+                <input
+                  v-model="filterToAddress"
+                  @input="debouncedAddressSearch"
+                  type="text"
+                  class="w-36 px-2 py-1 rounded-md border border-slate-200 dark:border-white/10 bg-white dark:bg-black/20 text-[11px] text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                  placeholder="输入地址或前缀"
+                />
+              </div>
             </div>
             <div class="flex items-center gap-2 text-[11px]">
               <button class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" @click="prevPage" :disabled="page===1">上一页</button>
@@ -399,7 +410,7 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
       <footer class="max-w-5xl mx-auto px-4 py-6 text-xs text-slate-500 dark:text-slate-400">
         <div class="flex items-center justify-between border-t border-slate-200 dark:border-white/10 pt-4">
           <span>© 2026 Temp Mail Console</span>
-          <a class="text-slate-400 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors" href="https://github.com/lpylinan/temp-email-worker" target="_blank" rel="noreferrer">GitHub</a>
+          <a class="text-slate-400 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors" href="https://github.com/lpylinan/Domain-Email-Worker" target="_blank" rel="noreferrer">GitHub</a>
         </div>
       </footer>
     </div>
@@ -417,7 +428,8 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
             adminToken: "", adminError: "", poller: null,
             expandedResults: {}, copyStatus: {}, isDark: true,
             apiActive: true,
-            availableDomains: [], filterDomain: ""
+            availableDomains: [], filterDomain: "",
+            filterToAddress: "", addressSearchTimer: null
           };
         },
         computed: {
@@ -473,6 +485,7 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
           async loadList() {
             let url = "/admin/emails?page=" + this.page;
             if (this.filterDomain) url += "&domain=" + this.filterDomain;
+            if (this.filterToAddress) url += "&to_address=" + encodeURIComponent(this.filterToAddress);
             const payload = await this.requestJson(url);
             if (!payload || !payload.data) return;
             this.items = payload.data.items || [];
@@ -620,6 +633,10 @@ export function renderHtml(PAGE_SIZE, RULES_PAGE_SIZE) {
               const p = JSON.parse(raw);
               return Array.isArray(p) ? JSON.stringify(p, null, 2) : String(p ?? "");
             } catch { return raw || ""; }
+          },
+          debouncedAddressSearch() {
+            clearTimeout(this.addressSearchTimer);
+            this.addressSearchTimer = setTimeout(() => { this.page = 1; this.loadList(); }, 300);
           },
           formatTime(ts) { return new Date(ts).toLocaleString(); }
         }

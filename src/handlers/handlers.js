@@ -28,7 +28,8 @@ export async function handleEmailsLatest(url, db) {
 export async function handleAdminEmails(url, db) {
   const page = clampPage(url.searchParams.get("page"));
   const domain = url.searchParams.get("domain") || null;
-  const { items, total } = await dbActions.getEmails(db, page, PAGE_SIZE, domain);
+  const toAddress = url.searchParams.get("to_address") || null;
+  const { items, total } = await dbActions.getEmails(db, page, PAGE_SIZE, domain, toAddress);
   return json({ page, pageSize: PAGE_SIZE, total, items });
 }
 

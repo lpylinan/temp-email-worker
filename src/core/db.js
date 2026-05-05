@@ -52,19 +52,34 @@ export async function getLatestEmail(db, address) {
 /**
  * 分页获取邮件记录 (支持域名过滤)
  */
-export async function getEmails(db, page, pageSize, domain = null) {
+export async function getEmails(db, page, pageSize, domain = null, toAddress = null) {
   const offset = (page - 1) * pageSize;
   let query = "SELECT message_id, from_address, to_address, subject, extracted_json, received_at FROM emails";
   let countQuery = "SELECT COUNT(1) as total FROM emails";
   const params = [pageSize, offset];
   const countParams = [];
+  const conditions = [];
+  const countConditions = [];
 
   if (domain) {
     const domainPattern = `%@${domain}%`;
-    query += " WHERE to_address LIKE ?";
-    countQuery += " WHERE to_address LIKE ?";
+    conditions.push("to_address LIKE ?");
+    countConditions.push("to_address LIKE ?");
     params.unshift(domainPattern);
     countParams.push(domainPattern);
+  }
+
+  if (toAddress) {
+    const addressPattern = `%${toAddress}%`;
+    conditions.push("to_address LIKE ?");
+    countConditions.push("to_address LIKE ?");
+    params.unshift(addressPattern);
+    countParams.push(addressPattern);
+  }
+
+  if (conditions.length > 0) {
+    query += " WHERE " + conditions.join(" AND ");
+    countQuery += " WHERE " + countConditions.join(" AND ");
   }
 
   query += " ORDER BY received_at DESC LIMIT ? OFFSET ?";

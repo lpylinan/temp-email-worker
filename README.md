@@ -9,7 +9,7 @@
 - 🔍 **内容正则提取**：对邮件正文进行正则匹配，提取验证码等关键信息。
 - 🖥️ **RESTful API**：对外提供查询接口，便于系统集成。
 - 🔄 **全局邮件转发**：入库后可自动转发原始邮件到真实邮箱。
-- 🧹 **记录自动清理**：Cron 每小时清理 48 小时前的历史数据，防止数据库膨胀。
+- 🧹 **记录自动清理**：Cron 每小时清理 1.5 年前的历史数据，防止数据库膨胀。
 - ☁️ **无服务器架构**：基于 Cloudflare Workers + D1，支持低成本托管。
 
 ## 界面预览
@@ -27,7 +27,7 @@
 
 ### 方式一：一键部署（推荐）
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/lpylinan/temp-email-worker)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/lpylinan/Domain-Email-Worker)
 
 > 点击上方按钮可全自动 Fork 并在你的 Cloudflare 账户上部署该项目，自动分配 D1 数据库资源。部署后别忘了按下方指南补充运行时变量（如 `ADMIN_TOKEN` 和 `API_TOKEN`）以及邮件路由。
 
@@ -57,7 +57,7 @@ npx wrangler d1 create temp-email-db
 将上一步创建 D1 数据库返回的 `database_id` 填入 `wrangler.toml`：
 
 ```toml
-name = "temp-email-worker"
+name = "Domain-Email-Worker"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 
@@ -67,7 +67,7 @@ database_name = "temp-email-db"
 database_id = "your-d1-database-id"
 
 [triggers]
-crons = ["0 * * * *"] # 每小时执行一次，自动清理超过 48 小时的数据库记录
+crons = ["0 * * * *"] # 每小时执行一次，自动清理超过 1.5 年的数据库记录
 ```
 
 ### 4. 配置运行时变量
@@ -124,7 +124,7 @@ npm run deploy
 
 - 在 Cloudflare 控制台左侧菜单，找到 **Email** -> **Email Routing**
 - 进入 **Routes** 配置页
-- 根据需要配置 **Catch-all address** 或具体的 **Custom addresses**（Destination 均选择 `Send to a Worker`，并选择刚才部署的 `temp-email-worker`）
+- 根据需要配置 **Catch-all address** 或具体的 **Custom addresses**（Destination 均选择 `Send to a Worker`，并选择刚才部署的 `Domain-Email-Worker`）
 
 > [!IMPORTANT]
 > 当你在 Cloudflare 邮件路由中将动作设置为 **"Send to a Worker"** 时，Cloudflare **不再**会自动将该邮件投递/转发到你原本的个人收件箱。Worker 会完全接管这条邮件的处理权。
@@ -254,7 +254,8 @@ curl "http://localhost:8787/api/emails/latest?address=demo@yourdomain.com" \
 
 ```
 ├── migrations/
-│   └── 0001_init.sql            # D1 初始表结构 migration
+│   ├── 0001_init.sql                         # D1 初始表结构 migration
+│   └── 0002_email_raw_and_forward_status.sql # 新增 forward_status 等字段
 ├── .dev.vars.example            # 本地开发变量示例
 ├── src/
 │   ├── index.js                 # Worker 入口（协调各模块处理事件）
